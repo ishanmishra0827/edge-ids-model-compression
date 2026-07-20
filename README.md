@@ -14,3 +14,44 @@ All hardware benchmarks were executed natively on an isolated single-board platf
 
 ## 🗂️ Clean Repository Architecture
 The repository is engineered around an explicit three-tier pipeline configuration:
+├── data/│   └── preprocess.py            # Feature engineering, encoding alignment, and safe-k SMOTE balancing├── models/│   ├── train_seeds.py           # Automated 5-seed training loop with TF-MOT pruning callbacks│   └── verify_sparsity.py       # Validates structural mask stripping and weight matrix zero-counts└── benchmarks/├── summarize_results.py     # Aggregates 5-seed telemetry files into scientific Mean ± SD tables└── evaluate_and_plot.py     # Executes TFLite hardware stream, plots 23-class CM, and macro ROC curves
+
+## 🚀 Execution & Reproduction Workflow
+
+### 1. Environment Initialization
+Clone the architecture repository and freeze package dependencies inside a clean virtual workspace:
+```bash
+git clone https://github.com
+cd edge-ids-model-compression
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Standardized Feature Engineering
+Execute the dataset ingestion module. This pipeline downloads canonical splits, isolates training-unseen anomalies as an evaluation check, applies aligned One-Hot Encoding, performs training-bounded Min-Max scaling, and applies automated local oversampling:
+```bash
+python data/preprocess.py
+```
+
+### 3. Statistically Validated Multiseed Experiment
+Execute the multi-seed optimization matrix. The script systematically loops over five distinct random seeds (`[42, 123, 456, 789, 2024]`), handles weight distribution configurations, strips training wrappers, and compiles compressed deployment models (`.tflite` via `Optimize.DEFAULT` optimization parameters):
+```bash
+python models/train_seeds.py
+```
+
+### 4. Telemetry Extraction & Post-Processing
+To evaluate and visualize metrics across your experiment configurations, pass any generated model artifact to the unified evaluation and plotting runner:
+```bash
+# Evaluate and plot charts for the dense seed 42 run
+python benchmarks/evaluate_and_plot.py --model models/MCDNN_dense_seed42.tflite
+
+# Evaluate and plot charts for the pruned seed 42 run
+python benchmarks/evaluate_and_plot.py --model models/MCDNN_pruned_seed42.tflite
+```
+
+### 5. Aggregate Macro Performance
+Once all five random training seeds have finalized their deployment cycles, parse the comprehensive results payload (`multiseed_results.json`) to dynamically print clean LaTeX tables embedded with structural standard deviation measurements (\(\pm\)):
+```bash
+python benchmarks/summarize_results.py
+```
