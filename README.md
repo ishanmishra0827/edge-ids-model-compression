@@ -4,7 +4,7 @@ This repository provides the official implementation, multi-seed training loops,
 
 The core of this study examines the dissociation between storage-level compression and live inference latency when deploying block-sparse models on commodity edge runtimes without sparse-aware execution kernels.
 
-## 🛠️ Hardware & Environment Core
+## Hardware & Environment Core
 All hardware benchmarks were executed natively on an isolated single-board platform to protect measurement accuracy from shared-host scheduling interference.
 
 * **Target Device:** Raspberry Pi 5 (Broadcom BCM2712 ARM Cortex-A76 @ 2.4 GHz)
@@ -12,7 +12,7 @@ All hardware benchmarks were executed natively on an isolated single-board platf
 * **Inference Runtime:** TensorFlow Lite (v2.14.0+) utilizing the native XNNPACK CPU Delegate
 * **Execution Paradigm:** Deterministic single-sample pipeline (Batch Size = 1) to simulate inline network edge packet routing
 
-## 🗂️ Clean Repository Architecture
+## Clean Repository Architecture
 The repository is engineered around an explicit three-tier pipeline configuration:
 
 ```text
@@ -26,7 +26,7 @@ The repository is engineered around an explicit three-tier pipeline configuratio
     └── evaluate_and_plot.py     # Executes TFLite hardware stream, plots 23-class CM, and macro ROC curves
 ```
 
-## 🚀 Execution & Reproduction Workflow
+## Execution & Reproduction Workflow
 
 ### 1. Environment Initialization
 Clone the architecture repository and freeze package dependencies inside a clean virtual workspace:
