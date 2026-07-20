@@ -1,19 +1,3 @@
-"""
-MULTI-SEED VARIANCE EXPERIMENT
-================================
-Trains BOTH the dense baseline and the pruned model across 5 random
-seeds each (10 total training runs), evaluates each on the real
-KDDTest+ known-class subset, and benchmarks latency the same way as
-before. Results are saved incrementally to 'multiseed_results.json'
-after EVERY run, so if you need to stop and restart, nothing is lost
--- it will skip runs already completed.
-
-REALISTIC TIME ESTIMATE: ~15-16 min per run x 10 runs = ~2.5-3 hours
-total. You can safely stop this (Ctrl+C) and resume later; it picks
-up where it left off.
-
-Run: python multi_seed_experiment.py
-"""
 import os
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
@@ -30,11 +14,6 @@ from sklearn.metrics import classification_report
 SEEDS = [42, 123, 456, 789, 2024]
 RESULTS_FILE = "multiseed_results.json"
 
-# ==============================================================================
-# LOAD DATA ONCE (same fixed preprocessed data for every seed/run --
-# only the model's weight initialization and training stochasticity vary,
-# which is the standard approach for seed-variance studies)
-# ==============================================================================
 x_train = np.load("x_train.npy").astype(np.float32)
 y_train = np.load("y_train.npy").astype(np.float32)
 x_val = np.load("x_val.npy").astype(np.float32)
@@ -180,9 +159,6 @@ def run_one(seed, use_pruning):
     return key, result
 
 
-# ==============================================================================
-# MAIN LOOP -- resumable
-# ==============================================================================
 results = load_results()
 
 for seed in SEEDS:
@@ -194,7 +170,7 @@ for seed in SEEDS:
             continue
         key, result = run_one(seed, use_pruning)
         results[key] = result
-        save_results(results)  # save after EVERY run
+        save_results(results) 
 
-print("\n\nALL RUNS COMPLETE. Results saved to multiseed_results.json")
+print("\n\nAll runs complete. Results saved to multiseed_results.json")
 print("Run summarize_multiseed.py next to compute mean +/- std.")
