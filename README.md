@@ -1,67 +1,64 @@
 # Edge IDS Model Compression: Block-Sparse Pruning vs. Inference Latency
 
-This repository provides the official implementation, multi-seed training loops, and native single-board hardware evaluation scripts for replicating the empirical benchmarks reported in **"Block-Sparse Pruning Compresses Models Without Reducing Inference Latency in Intrusion Detection Networks"**.
+Official implementation, multi-seed training loop, and native Raspberry Pi
+hardware evaluation scripts for the empirical benchmarks reported in
+**"Block-Sparse Pruning Compresses Models Without Reducing Inference
+Latency in Intrusion Detection Networks."**
 
-The core of this study examines the dissociation between storage-level compression and live inference latency when deploying block-sparse models on commodity edge runtimes without sparse-aware execution kernels.
+This study examines the dissociation between storage-level compression
+and live inference latency when deploying block-sparse pruned models on
+commodity edge runtimes without sparse-aware execution kernels.
 
-## Hardware & Environment Core
-All hardware benchmarks were executed natively on an isolated single-board platform to protect measurement accuracy from shared-host scheduling interference.
+## Hardware & Environment
 
 * **Target Device:** Raspberry Pi 5 (Broadcom BCM2712 ARM Cortex-A76 @ 2.4 GHz)
-* **Operating System:** Raspberry Pi OS (64-bit)
-* **Inference Runtime:** TensorFlow Lite (v2.14.0+) utilizing the native XNNPACK CPU Delegate
-* **Execution Paradigm:** Deterministic single-sample pipeline (Batch Size = 1) to simulate inline network edge packet routing
+* **Operating System:** Raspberry Pi OS (64-bit), kernel 6.18.34+rpt-rpi-2712
+* **Inference Runtime:** TensorFlow Lite, XNNPACK CPU delegate
+* **Execution Paradigm:** Single-sample pipeline (batch size = 1)
 
-## Clean Repository Architecture
-The repository is engineered around an explicit three-tier pipeline configuration:
+## Repository Contents
 
-```text
-├── data/
-│   └── preprocess.py            # Feature engineering, encoding alignment, and safe-k SMOTE balancing
-├── models/
-│   ├── train_seeds.py           # Automated 5-seed training loop with TF-MOT pruning callbacks
-│   └── verify_sparsity.py       # Validates structural mask stripping and weight matrix zero-counts
-└── benchmarks/
-    ├── summarize_results.py     # Aggregates 5-seed telemetry files into scientific Mean ± SD tables
-    └── evaluate_and_plot.py     # Executes TFLite hardware stream, plots 23-class CM, and macro ROC curves
-```
+| File | Purpose |
+|---|---|
+| `Data_preprocessing.py` | Downloads NSL-KDD train/test partitions, aligns one-hot encoding, applies training-bounded Min-Max scaling, isolates unseen-attack-type test records, applies safe-k SMOTE balancing |
+| `multi_seed_experiment.py` | Trains both dense and pruned models across 5 random seeds, exports each to TFLite, evaluates on the real test set, benchmarks latency |
+| `verify_sparsity.py` | Confirms actual achieved weight sparsity from a saved pruned model |
+| `summarize_multiseed.py` | Aggregates results across all completed seed runs into mean ± std, with ready-to-use LaTeX table output |
+| `Model_Evaluation_Final.py` | Generates the full 23-class confusion matrix and classification report used in the paper |
 
-## Execution & Reproduction Workflow
+## Reproduction Workflow
 
-### 1. Environment Initialization
-Clone the architecture repository and freeze package dependencies inside a clean virtual workspace:
+### 1. Environment setup
 ```bash
-git clone https://github.com
-cd edge-ids-model-compression
+git clone https://github.com/YOUR-USERNAME/YOUR-REPO-NAME.git
+cd YOUR-REPO-NAME
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Standardized Feature Engineering
-Execute the dataset ingestion module. This pipeline downloads canonical splits, isolates training-unseen anomalies as an evaluation check, applies aligned One-Hot Encoding, performs training-bounded Min-Max scaling, and applies automated local oversampling:
+### 2. Data preprocessing
 ```bash
-python data/preprocess.py
+python Data_preprocessing.py
 ```
+Produces `x_train.npy`, `y_train.npy`, `x_val.npy`, `y_val.npy`,
+`x_test_real.npy`, `y_test_real.npy`, and `unseen_class_report.csv`.
 
-### 3. Statistically Validated Multiseed Experiment
-Execute the multi-seed optimization matrix. The script systematically loops over five distinct random seeds (`[42, 123, 456, 789, 2024]`), handles weight distribution configurations, strips training wrappers, and compiles compressed deployment models (`.tflite` via `Optimize.DEFAULT` optimization parameters):
+### 3. Multi-seed training
 ```bash
-python models/train_seeds.py
+python multi_seed_experiment.py
 ```
+Trains 10 total models (5 seeds x dense/pruned). Resumable — safe to
+interrupt and rerun; already-completed runs are skipped. Saves
+incrementally to `multiseed_results.json`.
 
-### 4. Telemetry Extraction & Post-Processing
-To evaluate and visualize metrics across your experiment configurations, pass any generated model artifact to the unified evaluation and plotting runner:
+### 4. Aggregate results
 ```bash
-# Evaluate and plot charts for the dense seed 42 run
-python benchmarks/evaluate_and_plot.py --model models/MCDNN_dense_seed42.tflite
-
-# Evaluate and plot charts for the pruned seed 42 run
-python benchmarks/evaluate_and_plot.py --model models/MCDNN_pruned_seed42.tflite
+python summarize_multiseed.py
 ```
+Prints mean ± std across completed seeds and LaTeX-ready table rows.
 
-### 5. Aggregate Macro Performance
-Once all five random training seeds have finalized their deployment cycles, parse the comprehensive results payload (`multiseed_results.json`) to dynamically print clean LaTeX tables embedded with structural standard deviation measurements (\(\pm\)):
+### 5. Confusion matrix and classification report
 ```bash
-python benchmarks/summarize_results.py
+python Model_Evaluation_Final.py
 ```
