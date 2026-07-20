@@ -2,7 +2,7 @@ import json
 import numpy as np
 
 # Updated path matching the benchmarks folder config
-with open("benchmarks/multiseed_results.json", "r") as f:
+with open("multiseed_results.json", "r") as f:
     results = json.load(f)
 
 for variant in ["dense", "pruned"]:
