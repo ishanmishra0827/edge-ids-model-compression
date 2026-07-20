@@ -10,7 +10,7 @@ print("Downloading KDDTrain+...")
 df_train = pd.read_csv(train_url, header=None)
 df_train.drop(df_train.columns[-1], axis=1, inplace=True)  
 
-print("Downloading KDDTest+ (the canonical, official test set)...")
+print("Downloading KDDTest+...")
 df_test = pd.read_csv(test_url, header=None)
 df_test.drop(df_test.columns[-1], axis=1, inplace=True)  
 
@@ -55,9 +55,7 @@ if n_unseen > 0:
     unseen_report.to_csv("unseen_class_report.csv", index=False)
     print("\nUnseen attack types in test set (never appeared in training):")
     print(unseen_report.to_string(index=False))
-    print("\n-> Saved as 'unseen_class_report.csv'. Report this table in the paper —")
-    print("   it's a legitimate and expected part of NSL-KDD's benchmark design,")
-    print("   not a preprocessing error.")
+    print("\n-> Extracted unseen classes saved to 'unseen_class_report.csv'")
 
 x_test_real = x_test_full[known_mask]
 y_test_ints_real = np.array([label_to_idx[label] for label in y_test_labels[known_mask]])
@@ -106,9 +104,6 @@ np.save("y_test_real.npy", y_test_real.astype(np.float32))
 
 print(f"\nPreprocessing complete.")
 print(f"  Train (SMOTE-balanced): {x_train_res.shape}")
-print(f"  Validation (held out from train, no SMOTE): {x_val.shape}")
-print(f"  Test (REAL KDDTest+, known-class subset):    {x_test_real.shape}")
-print(f"  Classes: {total_classes}")
-print(f"\nIMPORTANT: report {n_unseen} unseen-attack-type test records")
-print("separately in the paper (see unseen_class_report.csv) rather than")
-print("omitting them silently — this is expected NSL-KDD benchmark behavior.")
+print(f"  Validation: {x_val.shape}")
+print(f"  Test Real:  {x_test_real.shape}")
+print(f"  Unseen Logged: {n_unseen}")
