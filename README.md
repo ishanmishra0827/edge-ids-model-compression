@@ -14,7 +14,13 @@ All hardware benchmarks were executed natively on an isolated single-board platf
 
 ## 🗂️ Clean Repository Architecture
 The repository is engineered around an explicit three-tier pipeline configuration:
-├── data/│   └── preprocess.py            # Feature engineering, encoding alignment, and safe-k SMOTE balancing├── models/│   ├── train_seeds.py           # Automated 5-seed training loop with TF-MOT pruning callbacks│   └── verify_sparsity.py       # Validates structural mask stripping and weight matrix zero-counts└── benchmarks/├── summarize_results.py     # Aggregates 5-seed telemetry files into scientific Mean ± SD tables└── evaluate_and_plot.py     # Executes TFLite hardware stream, plots 23-class CM, and macro ROC curves
+├── data/
+│   └── preprocess.py     # Feature engineering, encoding alignment, and safe-k SMOTE balancing
+├── models/
+│   ├── train_seeds.py     # Automated 5-seed training loop with TF-MOT pruning callbacks
+│   └── verify_sparsity.py     # Validates structural mask stripping and weight matrix zero-counts└── benchmarks/
+├── summarize_results.py     # Aggregates 5-seed telemetry files into scientific Mean ± SD tables
+└── evaluate_and_plot.py     # Executes TFLite hardware stream, plots 23-class CM, and macro ROC curves
 
 ## 🚀 Execution & Reproduction Workflow
 
