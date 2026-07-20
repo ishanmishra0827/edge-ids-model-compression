@@ -1,38 +1,51 @@
-import os
-os.environ["TF_USE_LEGACY_KERAS"] = "1"
-
-import numpy as np
-import tf_keras
 import glob
+import numpy as np
+import tensorflow as tf
 
-# Dynamically find any pruned H5 file in your artifacts folder
-model_paths = glob.glob("models/saved_artifacts/*pruned*.h5")
+# ==============================================================================
+# Finds all pruned .tflite models in the current directory and reports
+# measured weight sparsity for each. Works directly on the .tflite format,
+# since multi_seed_experiment.py exports only .tflite files (no .h5).
+# ==============================================================================
+model_paths = sorted(glob.glob("*pruned*.tflite"))
 
 if not model_paths:
-    print("No pruned models found in models/saved_artifacts/")
+    print("No pruned .tflite models found in the current directory.")
+    print("Expected filenames like: MCDNN_pruned_seed42.tflite")
 else:
     for path in model_paths:
-        print(f"\nSparsity profile for: {os.path.basename(path)}")
+        print(f"\nSparsity profile for: {path}")
         print("-" * 60)
-        
-        model = tf_keras.models.load_model(path)
+
+        interpreter = tf.lite.Interpreter(model_path=path)
+        interpreter.allocate_tensors()
+
         total_weights = 0
         zero_weights = 0
 
-        for layer in model.layers:
-            weights = layer.get_weights()
-            for w in weights:
-                if w.ndim >= 2: 
-                    n_total = w.size
-                    n_zero = np.sum(w == 0)
-                    total_weights += n_total
-                    zero_weights += n_zero
-                    if n_total > 0:
-                        pct = 100.0 * n_zero / n_total
-                        print(f"{layer.name:25s} shape={str(w.shape):18s} layer_sparsity={pct:.2f}%")
+        # Pull tensor details and inspect weight-like tensors (2D+, not biases)
+        tensor_details = interpreter.get_tensor_details()
+        for detail in tensor_details:
+            try:
+                tensor = interpreter.get_tensor(detail['index'])
+            except ValueError:
+                continue  # some tensors aren't readable (e.g. dynamic shapes)
+
+            if tensor.ndim >= 2:
+                n_total = tensor.size
+                n_zero = np.sum(tensor == 0)
+                total_weights += n_total
+                zero_weights += n_zero
+                if n_total > 0:
+                    pct = 100.0 * n_zero / n_total
+                    name = detail['name'][:40]
+                    print(f"{name:42s} shape={str(tensor.shape):16s} sparsity={pct:.2f}%")
 
         print("-" * 60)
-        overall_sparsity = 100.0 * zero_weights / total_weights
-        print(f"Global model sparsity: {overall_sparsity:.2f}%")
-        print(f"Total weights:         {total_weights:,}")
-        print(f"Zero parameters:       {zero_weights:,}")
+        if total_weights > 0:
+            overall_sparsity = 100.0 * zero_weights / total_weights
+            print(f"Global model sparsity: {overall_sparsity:.2f}%")
+            print(f"Total weights:         {total_weights:,}")
+            print(f"Zero parameters:       {zero_weights:,}")
+        else:
+            print("No 2D+ weight tensors found to analyze.")
