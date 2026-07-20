@@ -1,35 +1,38 @@
-"""
-Verify actual achieved sparsity in the saved pruned model.
-Run this in the same folder as MCDNN_structured_pruned.h5
-"""
 import os
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
 import numpy as np
 import tf_keras
+import glob
 
-model = tf_keras.models.load_model("MCDNN_structured_pruned.h5")
+# Dynamically find any pruned H5 file in your artifacts folder
+model_paths = glob.glob("models/saved_artifacts/*pruned*.h5")
 
-total_weights = 0
-zero_weights = 0
+if not model_paths:
+    print("No pruned models found in models/saved_artifacts/")
+else:
+    for path in model_paths:
+        print(f"\nSparsity profile for: {os.path.basename(path)}")
+        print("-" * 60)
+        
+        model = tf_keras.models.load_model(path)
+        total_weights = 0
+        zero_weights = 0
 
-print("Per-layer sparsity:")
-print("-" * 60)
-for layer in model.layers:
-    weights = layer.get_weights()
-    for w in weights:
-        if w.ndim >= 2:  # only count actual weight matrices, not biases
-            n_total = w.size
-            n_zero = np.sum(w == 0)
-            total_weights += n_total
-            zero_weights += n_zero
-            if n_total > 0:
-                pct = 100.0 * n_zero / n_total
-                print(f"{layer.name:30s} shape={str(w.shape):20s} sparsity={pct:.2f}%")
+        for layer in model.layers:
+            weights = layer.get_weights()
+            for w in weights:
+                if w.ndim >= 2: 
+                    n_total = w.size
+                    n_zero = np.sum(w == 0)
+                    total_weights += n_total
+                    zero_weights += n_zero
+                    if n_total > 0:
+                        pct = 100.0 * n_zero / n_total
+                        print(f"{layer.name:25s} shape={str(w.shape):18s} layer_sparsity={pct:.2f}%")
 
-print("-" * 60)
-overall_sparsity = 100.0 * zero_weights / total_weights
-print(f"\nOVERALL MODEL SPARSITY: {overall_sparsity:.2f}%")
-print(f"Total weight parameters: {total_weights:,}")
-print(f"Zero-valued parameters:  {zero_weights:,}")
-print(f"Non-zero parameters:     {total_weights - zero_weights:,}")
+        print("-" * 60)
+        overall_sparsity = 100.0 * zero_weights / total_weights
+        print(f"Global model sparsity: {overall_sparsity:.2f}%")
+        print(f"Total weights:         {total_weights:,}")
+        print(f"Zero parameters:       {zero_weights:,}")
