@@ -20,11 +20,12 @@ commodity edge runtimes without sparse-aware execution kernels.
 
 | File | Purpose |
 |---|---|
-| `Data_preprocessing.py` | Downloads NSL-KDD train/test partitions, aligns one-hot encoding, applies training-bounded Min-Max scaling, isolates unseen-attack-type test records, applies safe-k SMOTE balancing |
-| `multi_seed_experiment.py` | Trains both dense and pruned models across 5 random seeds, exports each to TFLite, evaluates on the real test set, benchmarks latency |
+| `Data_preprocessing.py` | Downloads NSL-KDD train/test partitions, aligns one-hot encoding, isolates unseen-attack-type test records, applies safe-k SMOTE balancing. Features are used at their native scale after encoding. |
+| `multi_seed_experiment.py` | Orchestrates 10 total training runs (5 seeds × dense/pruned) by launching run_single_seed.py as a fresh subprocess for each. This guarantees full memory reclamation between runs. Resumable: safe to interrupt and rerun. |
 | `verify_sparsity.py` | Confirms actual achieved weight sparsity from a saved pruned model |
 | `summarize_multiseed.py` | Aggregates results across all completed seed runs into mean ± std, with ready-to-use LaTeX table output |
 | `Model_Evaluation_Final.py` | Generates the full 23-class confusion matrix and classification report used in the paper |
+| `run_single_seed.py` | Trains one dense or pruned model for a single seed, exports to TFLite, evaluates on the real test set, benchmarks latency, and saves its result. Invoked automatically by multi_seed_experiment.py. |
 
 ## Reproduction Workflow
 
