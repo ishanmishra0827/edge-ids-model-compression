@@ -31,7 +31,7 @@ commodity edge runtimes without sparse-aware execution kernels.
 
 ### 1. Environment setup
 ```bash
-git clone https://github.com
+git clone git clone https://github.com/ishanmishra0827/edge-ids-model-compression.git
 cd edge-ids-model-compression
 python3 -m venv venv
 source venv/bin/activate
@@ -61,5 +61,5 @@ Prints mean ± std across completed seeds and LaTeX-ready table rows.
 
 ### 5. Confusion matrix and classification report
 ```bash
-python Model_Evaluation_Final.py
+python Model_Evaluation_Final.py MCDNN_pruned_seed42.tflite
 ```
