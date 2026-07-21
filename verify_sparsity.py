@@ -1,7 +1,3 @@
-"""
-Verify actual achieved sparsity in the saved pruned model.
-Run this in the same folder as MCDNN_structured_pruned.h5
-"""
 import os
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
@@ -18,7 +14,7 @@ print("-" * 60)
 for layer in model.layers:
     weights = layer.get_weights()
     for w in weights:
-        if w.ndim >= 2:  # only count actual weight matrices, not biases
+        if w.ndim >= 2:
             n_total = w.size
             n_zero = np.sum(w == 0)
             total_weights += n_total
