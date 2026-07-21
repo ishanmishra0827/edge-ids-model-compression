@@ -1,60 +1,26 @@
-"""
-NSL-KDD Data Preprocessing — CORRECTED VERSION
-================================================
-Fixes the core scientific issue flagged in review: the original script only
-downloaded KDDTrain+.txt and created an internal train/test split from it.
-This version downloads the REAL, canonical KDDTest+.txt and evaluates
-against it. This matters because KDDTest+ deliberately contains attack
-sub-types that do NOT appear in KDDTrain+ (e.g. processtable, apache2,
-mailbomb, named, snmpgetattack, snmpguess, worm, httptunnel, xterm, ps,
-sqlattack, mscan, saint, udpstorm, sendmail, xlock, xsnoop) — this is the
-whole point of the NSL-KDD benchmark design, and skipping it means the
-original model was never actually tested on unseen attack types.
-
-Outputs:
-  x_train.npy, y_train.npy       -> SMOTE-balanced training data
-  x_test_real.npy                -> REAL KDDTest+ features (known-class subset)
-  y_test_real.npy                -> REAL KDDTest+ one-hot labels (known-class subset)
-  unseen_class_report.csv        -> counts of test records whose attack type
-                                     never appeared in training (report these
-                                     separately in the paper, don't drop them silently)
-"""
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from imblearn.over_sampling import SMOTE
 
-# ==============================================================================
-# 1. DATASET INGESTION — BOTH TRAIN AND REAL TEST FILES
-# ==============================================================================
 train_url = "https://raw.githubusercontent.com/defcom17/NSL_KDD/master/KDDTrain+.txt"
 test_url = "https://raw.githubusercontent.com/arjbah/nsl-kdd/master/nsl-kdd/KDDTest+.txt"
 
 print("Downloading KDDTrain+...")
 df_train = pd.read_csv(train_url, header=None)
-df_train.drop(df_train.columns[-1], axis=1, inplace=True)  # drop difficulty column
+df_train.drop(df_train.columns[-1], axis=1, inplace=True)
 
-print("Downloading KDDTest+ (the canonical, official test set)...")
+print("Downloading KDDTest+...")
 df_test = pd.read_csv(test_url, header=None)
-df_test.drop(df_test.columns[-1], axis=1, inplace=True)  # drop difficulty column
+df_test.drop(df_test.columns[-1], axis=1, inplace=True) 
 
 print(f"Train records: {len(df_train)}  |  Test records: {len(df_test)}")
 
-# Track indices for string transformation features
-# Column 1: Protocol, Column 2: Service, Column 3: Flag, Column 41: Attack Label
 categorical_cols = [1, 2, 3]
 for col in categorical_cols:
     df_train[col] = df_train[col].astype(str)
     df_test[col] = df_test[col].astype(str)
 
-# ==============================================================================
-# 2. ENCODING PARADIGM — FIT ON COMBINED DATA SO COLUMNS ALIGN
-# ==============================================================================
-# Encoding train and test separately with pd.get_dummies can silently produce
-# DIFFERENT column sets (e.g. a rare 'service' value that only appears in one
-# file). Concatenating first guarantees x_train and x_test have identical,
-# aligned feature columns.
 combined = pd.concat([df_train, df_test], keys=["train", "test"])
 combined_encoded = pd.get_dummies(combined, columns=categorical_cols)
 
@@ -67,14 +33,6 @@ x_test_full = df_test_encoded.drop(41, axis=1).values
 y_train_labels = df_train_encoded[41].values
 y_test_labels = df_test_encoded[41].values
 
-# ==============================================================================
-# 3. LABEL SPACE — DEFINED BY TRAINING SET ONLY (this is the honest approach)
-# ==============================================================================
-# The model can only ever predict classes it was trained on. Test records
-# whose true label never appeared in training are, by construction, NOT
-# predictable by this model — that's not a bug, it's the benchmark testing
-# real-world generalization limits. We report them separately rather than
-# silently dropping or mis-mapping them.
 train_classes = sorted(pd.unique(y_train_labels))
 total_classes = len(train_classes)
 label_to_idx = {label: i for i, label in enumerate(train_classes)}
@@ -82,7 +40,6 @@ label_to_idx = {label: i for i, label in enumerate(train_classes)}
 print(f"\nTotal classes learned from training set: {total_classes}")
 print(f"Training classes: {train_classes}")
 
-# Identify which test records have a label the model has never seen
 known_mask = pd.Series(y_test_labels).isin(label_to_idx).values
 unseen_mask = ~known_mask
 
@@ -102,10 +59,6 @@ if n_unseen > 0:
     print("   it's a legitimate and expected part of NSL-KDD's benchmark design,")
     print("   not a preprocessing error.")
 
-# ==============================================================================
-# 4. BUILD THE REAL TEST SET (known-class subset — this is what the model
-#    can actually be scored against with standard classification metrics)
-# ==============================================================================
 x_test_real = x_test_full[known_mask]
 y_test_ints_real = np.array([label_to_idx[label] for label in y_test_labels[known_mask]])
 y_test_real = np.eye(total_classes)[y_test_ints_real]
@@ -113,10 +66,6 @@ y_test_real = np.eye(total_classes)[y_test_ints_real]
 print(f"\nFinal x_test_real shape: {x_test_real.shape}")
 print(f"Final y_test_real shape: {y_test_real.shape}")
 
-# ==============================================================================
-# 5. TRAIN/VALIDATION SPLIT FROM TRAINING DATA ONLY
-#    (test set is now fully held out and untouched — no leakage)
-# ==============================================================================
 from sklearn.model_selection import train_test_split
 
 y_train_ints_all = np.array([label_to_idx[label] for label in y_train_labels])
@@ -127,14 +76,8 @@ x_tr, x_val, y_tr, y_val = train_test_split(
     stratify=y_train_ints_all, random_state=42
 )
 
-# ==============================================================================
-# 6. BALANCING VIA SMOTE (training partition only — never touches val or test)
-# ==============================================================================
 print("\nSynthesizing minority class instances via SMOTE... Please wait.")
 
-# NOTE: k_neighbors must be smaller than the smallest class's training count.
-# Compute a safe k automatically instead of hardcoding, since some classes
-# (e.g. those with 2-4 training samples) cannot support k=5.
 y_tr_ints = np.argmax(y_tr, axis=1)
 class_counts = pd.Series(y_tr_ints).value_counts()
 min_class_size = class_counts.min()
@@ -145,9 +88,6 @@ smote = SMOTE(k_neighbors=safe_k, random_state=42)
 x_train_res, y_train_res_ints = smote.fit_resample(x_tr, y_tr_ints)
 y_train_res = np.eye(total_classes)[y_train_res_ints]
 
-# ==============================================================================
-# 7. DIAGNOSTIC MANUSCRIPT GRAPH GENERATION
-# ==============================================================================
 unique, counts = np.unique(y_train_res_ints, return_counts=True)
 plt.figure(figsize=(12, 6))
 plt.bar(unique, counts, color='steelblue', edgecolor='black')
@@ -157,9 +97,6 @@ plt.title("Balanced Class Distribution Post-SMOTE Optimization")
 plt.tight_layout()
 plt.savefig("balanced_classes.png")
 
-# ==============================================================================
-# 8. MEMORY PERSISTENCE ARRAY ARTIFACTS
-# ==============================================================================
 np.save("x_train.npy", x_train_res.astype(np.float32))
 np.save("y_train.npy", y_train_res.astype(np.float32))
 np.save("x_val.npy", x_val.astype(np.float32))
