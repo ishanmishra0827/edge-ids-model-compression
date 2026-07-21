@@ -55,9 +55,7 @@ if n_unseen > 0:
     unseen_report.to_csv("unseen_class_report.csv", index=False)
     print("\nUnseen attack types in test set (never appeared in training):")
     print(unseen_report.to_string(index=False))
-    print("\n-> Saved as 'unseen_class_report.csv'. Report this table in the paper —")
-    print("   it's a legitimate and expected part of NSL-KDD's benchmark design,")
-    print("   not a preprocessing error.")
+    print("\n-> Saved as 'unseen_class_report.csv'.")
 
 x_test_real = x_test_full[known_mask]
 y_test_ints_real = np.array([label_to_idx[label] for label in y_test_labels[known_mask]])
@@ -109,6 +107,3 @@ print(f"  Train (SMOTE-balanced): {x_train_res.shape}")
 print(f"  Validation (held out from train, no SMOTE): {x_val.shape}")
 print(f"  Test (REAL KDDTest+, known-class subset):    {x_test_real.shape}")
 print(f"  Classes: {total_classes}")
-print(f"\nIMPORTANT: report {n_unseen} unseen-attack-type test records")
-print("separately in the paper (see unseen_class_report.csv) rather than")
-print("omitting them silently — this is expected NSL-KDD benchmark behavior.")
