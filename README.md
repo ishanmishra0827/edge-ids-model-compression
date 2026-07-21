@@ -30,8 +30,8 @@ commodity edge runtimes without sparse-aware execution kernels.
 
 ### 1. Environment setup
 ```bash
-git clone https://github.com/YOUR-USERNAME/YOUR-REPO-NAME.git
-cd YOUR-REPO-NAME
+git clone https://github.com
+cd edge-ids-model-compression
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
